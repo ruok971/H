@@ -1,0 +1,208 @@
+-- [[ LOAD WINDUI ]] --
+local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+
+-- [[ SERVICES ]] --
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+local Lighting = game:GetService("Lighting")
+local RS = game:GetService("ReplicatedStorage")
+local WS = game:GetService("Workspace")
+local TS = game:GetService("TweenService")
+local Debris = game:GetService("Debris")
+local ProximityPromptService = game:GetService("ProximityPromptService")
+
+local player = Players.LocalPlayer
+local Camera = WS.CurrentCamera
+local char = player.Character or player.CharacterAdded:Wait()
+local humanoid = char:WaitForChild("Humanoid")
+local DroppedFolder = workspace:WaitForChild("DroppedItems")
+
+-- [[ GLOBAL STATES ]] --
+local states = {
+    espEnabled = false,
+    healthEsp = false,
+    inspectEnabled = false,
+    distanceESP = false,
+    droppedItemESP = false,
+    -- Silent Aim States
+    SilentAimEnabled = false,
+    ShowFOV = true,
+    FOV = 120,
+    LockPart = "Head",
+    -- PVP States
+    antiDeathV2 = false,
+    underground = false,
+    noclip = false,
+    -- Inventory Viewer
+    InventoryViewerEnabled = false,
+    ViewerRunning = false
+}
+
+local originalData = {}
+local distanceTags = {}
+local ItemESPs = {}
+local undergroundDepth = -50
+local SilentFOVCircle, tracerLine, targetDot
+
+-- [[ UTILITY FUNCTIONS ]] --
+local function GetColorFromRarity(rarityName)
+    local colors = {
+        ['Common'] = Color3.fromRGB(255, 255, 255),
+        ['UnCommon'] = Color3.fromRGB(99, 255, 52),
+        ['Rare'] = Color3.fromRGB(51, 170, 255),
+        ['Legendary'] = Color3.fromRGB(255, 150, 0),
+        ['Epic'] = Color3.fromRGB(237, 44, 255),
+        ['Omega'] = Color3.fromRGB(255, 20, 51),
+    }
+    return colors[rarityName] or Color3.fromRGB(255, 255, 255)
+end
+
+local function isPlayerExcluded(plr)
+    if not plr or plr == player then return true end
+    if plr:GetAttribute("SilentAimIgnore") then return true end
+    return table.find({"MithnoFs_49"}, plr.Name) ~= nil
+end
+
+local function CreateDrawings()
+    if SilentFOVCircle then pcall(function() SilentFOVCircle:Remove() end) end
+    SilentFOVCircle = Drawing.new("Circle")
+    SilentFOVCircle.Thickness, SilentFOVCircle.NumSides, SilentFOVCircle.Transparency = 2, 64, 0.8
+    tracerLine = Drawing.new("Line")
+    tracerLine.Thickness, tracerLine.Color = 1, Color3.new(1, 0.2, 0.2)
+    targetDot = Drawing.new("Circle")
+    targetDot.Radius, targetDot.Filled, targetDot.Color = 4, true, Color3.new(1, 0.2, 0.2)
+end
+
+local function GetTarget()
+    local closest, shortestDistance = nil, states.FOV
+    local center = Camera.ViewportSize / 2
+    for _, plr in pairs(Players:GetPlayers()) do
+        if not isPlayerExcluded(plr) and plr.Character then
+            local part = plr.Character:FindFirstChild(states.LockPart)
+            local hum = plr.Character:FindFirstChild("Humanoid")
+            if part and hum and hum.Health > 0 then
+                local screenPos, onScreen = Camera:WorldToViewportPoint(part.Position)
+                local dist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
+                if onScreen and dist < shortestDistance then
+                    shortestDistance, closest = dist, plr
+                end
+            end
+        end
+    end
+    return closest
+end
+
+-- [[ WINDOW SETUP ]] --
+local Window = WindUI:CreateWindow({
+    Title = "Master Hacker Hub x ลูกตาแพ่ม",
+    Icon = "rbxassetid://4483345998",
+})
+
+-- เลื่อนแท็บขึ้นมาใหม่
+local VisualTab = Window:Tab({ Title = "Visual", Icon = "eye" })        -- เดิมแท็บ 2
+local AdvancedTab = Window:Tab({ Title = "Advanced", Icon = "target" }) -- เดิมแท็บ 3
+local HackerTab = Window:Tab({ Title = "PVP", Icon = "flame" })         -- เดิมแท็บ 4
+
+------------------------------------------------
+-- [ TAB 1: VISUAL ]
+------------------------------------------------
+VisualTab:Section({ Title = "👁️ Player ESP" })
+VisualTab:Toggle({ Title = "ESP Players", Desc = "ไฮไลท์ตัวละคร", Callback = function(v) states.espEnabled = v for _, p in pairs(Players:GetPlayers()) do if p ~= player and p.Character then local h = p.Character:FindFirstChild("ESPHighlight") if h then h.Enabled = v end end end end })
+VisualTab:Toggle({ Title = "Distance ESP", Desc = "แสดงระยะห่าง", Callback = function(v) states.distanceESP = v if not v then for _, gui in pairs(distanceTags) do gui:Destroy() end distanceTags = {} end end })
+VisualTab:Toggle({ Title = "Health ESP", Desc = "แถบเลือดข้างตัว", Callback = function(v) states.healthEsp = v end })
+VisualTab:Toggle({ Title = "Dropped Item ESP", Desc = "ส่องของตกพื้น", Callback = function(v) states.droppedItemESP = v end })
+
+------------------------------------------------
+-- [ TAB 2: ADVANCED ]
+------------------------------------------------
+AdvancedTab:Section({ Title = "🎯 Silent Aim & Wallbang" })
+AdvancedTab:Toggle({ Title = "Silent Aim | Wallbang", Default = false, Callback = function(v) states.SilentAimEnabled = v end })
+AdvancedTab:Slider({ Title = "FOV Size", Min = 20, Max = 800, Default = states.FOV, Callback = function(v) states.FOV = v end })
+AdvancedTab:Toggle({ Title = "Show FOV Circle", Default = true, Callback = function(v) states.ShowFOV = v end })
+AdvancedTab:Dropdown({ Title = "Target Part", Values = {"Head", "HumanoidRootPart"}, Default = "Head", Callback = function(v) states.LockPart = v end })
+
+AdvancedTab:Section({ Title = "📦 Inventory Viewer" })
+AdvancedTab:Toggle({
+    Title = 'Inventory Viewer (Full)',
+    Desc = "ส่องไอเทมแบบรูปภาพ",
+    Callback = function(Value)
+        states.InventoryViewerEnabled = Value
+        if Value and not states.ViewerRunning then
+            states.ViewerRunning = true
+            task.spawn(function()
+                while task.wait(0.2) do
+                    if not states.InventoryViewerEnabled then continue end
+                    pcall(function()
+                        for _, v in pairs(Players:GetPlayers()) do
+                            if v ~= player and v.Character and v.Character:FindFirstChild('HumanoidRootPart') then
+                                local root = v.Character.HumanoidRootPart
+                                local gui = root:FindFirstChild('ItemBillboard') or Instance.new('BillboardGui', root)
+                                if gui.Name ~= 'ItemBillboard' then
+                                    gui.Name = 'ItemBillboard'; gui.AlwaysOnTop = true; gui.Size = UDim2.new(0, 200, 0, 50); gui.StudsOffset = Vector3.new(0, -5, 0)
+                                    local bg = Instance.new('Frame', gui); bg.Name = 'BG'; bg.BackgroundTransparency = 1; bg.Size = UDim2.new(1, 0, 1, 0)
+                                    Instance.new('UIListLayout', bg).FillDirection = "Horizontal"
+                                end
+                                -- (Logic การดึงรูปภาพไอเทมเหมือนสคริปต์ก่อนหน้า)
+                            end
+                        end
+                    end)
+                end
+            end)
+        end
+    end
+})
+
+------------------------------------------------
+-- [ TAB 3: PVP ]
+------------------------------------------------
+HackerTab:Section({ Title = "🔫 Weapon Mod" })
+HackerTab:Button({ Title = "ลดแรงดีด (Recoil 0)", Callback = function() local t = char:FindFirstChildOfClass("Tool") if t then t:SetAttribute("Recoil", 0) end end })
+HackerTab:Button({ Title = "รีโหลดไว", Callback = function() local t = char:FindFirstChildOfClass("Tool") if t then t:SetAttribute("reload_time", 0) end end })
+
+HackerTab:Section({ Title = "⚡ Survival" })
+HackerTab:Toggle({ Title = "กันตาย V2 (มุดดินหนี)", Callback = function(v) states.antiDeathV2 = v end })
+HackerTab:Toggle({ Title = "No Clip (เดินทะลุ)", Callback = function(v) states.noclip = v end })
+HackerTab:Toggle({ Title = "ลงดินเก็บของ", Callback = function(v) states.underground = v end })
+HackerTab:Input({ Title = "ความลึกมุดดิน", Default = "-50", Callback = function(v) undergroundDepth = tonumber(v) or -50 end })
+
+-- [[ CORE SYSTEMS (SILENT AIM & LOOP) ]] --
+CreateDrawings()
+local Remote = RS:WaitForChild("Remotes", 5):WaitForChild("Send", 5)
+if Remote and hookfunction then
+    local oldFire; oldFire = hookfunction(Remote.FireServer, function(self, ...)
+        local args = {...}
+        if states.SilentAimEnabled and args[2] == "shoot_gun" and self == Remote then
+            local target = GetTarget()
+            if target and target.Character:FindFirstChild(states.LockPart) then
+                local aimPart = target.Character[states.LockPart]
+                local aimPos = aimPart.Position + (aimPart.Parent.PrimaryPart.Velocity * 0.15)
+                args[4] = CFrame.new(1/0, 1/0, 1/0)
+                args[5] = {[1] = {[1] = {Instance = aimPart, Position = aimPos}}}
+            end
+        end
+        return oldFire(self, unpack(args))
+    end)
+end
+
+RunService.RenderStepped:Connect(function()
+    local center = Camera.ViewportSize / 2
+    if SilentFOVCircle then
+        SilentFOVCircle.Visible = states.SilentAimEnabled and states.ShowFOV
+        SilentFOVCircle.Position, SilentFOVCircle.Radius = center, states.FOV
+        local target = states.SilentAimEnabled and GetTarget()
+        if target and target.Character:FindFirstChild(states.LockPart) then
+            local screenPos, onScreen = Camera:WorldToViewportPoint(target.Character[states.LockPart].Position)
+            tracerLine.Visible, targetDot.Visible = onScreen, onScreen
+            tracerLine.From, tracerLine.To = center, Vector2.new(screenPos.X, screenPos.Y)
+            targetDot.Position = Vector2.new(screenPos.X, screenPos.Y)
+        else
+            tracerLine.Visible, targetDot.Visible = false, false
+        end
+    end
+
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    if states.antiDeathV2 and humanoid.Health < 16 then char.HumanoidRootPart.CFrame *= CFrame.new(0, -12, 0) end
+    if states.underground then char.HumanoidRootPart.CFrame *= CFrame.new(0, undergroundDepth/60, 0) char.HumanoidRootPart.Velocity = Vector3.zero end
+    if states.noclip then for _, p in pairs(char:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide = false end end end
+end)
