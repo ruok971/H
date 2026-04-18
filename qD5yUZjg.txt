@@ -1,0 +1,305 @@
+-- [[ LOAD WINDUI ]] --
+local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+
+-- [[ SERVICES ]] --
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+local SoundService = game:GetService("SoundService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
+
+-- [[ CONFIGURATION ]] --
+local TELEPORT_COORD = Vector3.new(-260, 14, 1164)
+
+-- [[ GLOBAL STATES ]] --
+local states = {
+    autoPrompt = false,
+    espEnabled = false,
+    bouncingHead = false,
+}
+local selectedItemToStore = "" -- ตัวแปรเก็บชื่อไอเทมที่จะเก็บเข้าตู้
+
+-- [[ UTILITIES ]] --
+local function GetBouncingColor()
+    return Color3.fromRGB(0, 0, 0):Lerp(Color3.fromRGB(255, 0, 0), (math.sin(tick() * 2) + 1) / 2)
+end
+
+-- [[ SOUND EFFECT ]] --
+task.spawn(function()
+    pcall(function()
+        local sound = Instance.new("Sound")
+        sound.SoundId = "rbxassetid://99657116316657"
+        sound.Volume = 2
+        sound.Parent = SoundService
+        sound:Play()
+        sound.Ended:Connect(function() sound:Destroy() end)
+    end)
+end)
+
+-- [[ WINDOW SETUP ]] --
+local Window = WindUI:CreateWindow({
+    Title = "WAR SCRIPT V.2 [CLEAN EDITION]",
+    Icon = "rbxassetid://10723343321", 
+})
+
+local MainTab = Window:Tab({ Title = "ฟาร์มทั่วไป", Icon = "zap" })
+local CombatTab = Window:Tab({ Title = "ต่อสู้/PVP", Icon = "swords" })
+local InventoryTab = Window:Tab({ Title = "จัดการกระเป๋า", Icon = "package" }) -- แถบใหม่ที่ขอ
+local VisualTab = Window:Tab({ Title = "สายตา", Icon = "eye" })
+local GunModTab = Window:Tab({ Title = "ปรับแต่งปืน", Icon = "target" })
+
+------------------------------------------------
+-- [ TAB 1: FARMING ]
+------------------------------------------------
+MainTab:Section({ Title = "ช่วยฟาร์มอัตโนมัติ" })
+
+MainTab:Button({
+    Title = "รับเครื่องมือวาร์ป",
+    Desc = "เอาไว้วาร์ปของที่เลือกไปจุดฟาร์ม หรือวาร์ปตัวเองก็ได้",
+    Icon = "mouse-pointer-2",
+    Callback = function()
+        local tool = Instance.new("Tool", LocalPlayer.Backpack) 
+        tool.Name = "วาร์ปไอเทม+ตัวเรา" 
+        tool.RequiresHandle = false
+        tool.Activated:Connect(function()
+            local t = Mouse.Target 
+            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if hrp and t and t:IsA("BasePart") then
+                t.CFrame = CFrame.new(TELEPORT_COORD)
+                task.wait(0.1)
+                hrp.CFrame = CFrame.new(TELEPORT_COORD + Vector3.new(0, 5, 0))
+            end
+        end)
+        WindUI:Notify({ Title = "สำเร็จ", Content = "ได้รับเบ็ดวาร์ปแล้ว", Duration = 3 })
+    end
+})
+
+MainTab:Toggle({
+    Title = "เปิดฟาร์ม E (Auto Prompt)",
+    Desc = "เดินไปใกล้ๆ แล้วมันจะกดเก็บของหรือคุยให้อัตโนมัติ",
+    Value = false,
+    Callback = function(v)
+        states.autoPrompt = v
+    end
+})
+
+------------------------------------------------
+-- [ TAB 2: COMBAT ]
+------------------------------------------------
+CombatTab:Section({ Title = "ช่วยยิงตึงๆ" })
+
+CombatTab:Toggle({
+    Title = "เปิดโหมดหัวใหญ่ (Bouncing)",
+    Desc = "ขยายหัวศัตรูให้ยิงง่ายขึ้น พร้อมเปลี่ยนสีเป้าหมาย",
+    Value = false,
+    Callback = function(v)
+        states.bouncingHead = v
+    end
+})
+
+CombatTab:Section({ Title = "ขโมยไอเทมคนอื่น" })
+
+CombatTab:Button({
+    Title = "แสกนกระเป๋าคนทั้งเซิร์ฟ",
+    Desc = "ดึงของจากมือคนอื่นมาให้เราเลือกขโมย (ไม่เอาหมัด)",
+    Icon = "refresh-cw",
+    Callback = function()
+        WindUI:Notify({ Title = "กำลังเช็ค", Content = "กำลังดูว่าใครมีของดีบ้าง...", Duration = 2 })
+        
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer then
+                local char = p.Character
+                local backpack = p:FindFirstChild("Backpack")
+                
+                local function addTool(tool)
+                    if tool:IsA("Tool") and tool.Name ~= "Fist" then
+                        CombatTab:Button({
+                            Title = "จิ๊กของจาก: " .. p.DisplayName .. " [" .. tool.Name .. "]",
+                            Icon = "hand",
+                            Callback = function()
+                                tool.Parent = LocalPlayer.Backpack
+                                WindUI:Notify({ Title = "สำเร็จ", Content = "ขโมย " .. tool.Name .. " มาแล้ว", Duration = 2 })
+                            end
+                        })
+                    end
+                end
+
+                if backpack then for _, t in pairs(backpack:GetChildren()) do addTool(t) end end
+                if char then for _, t in pairs(char:GetChildren()) do addTool(t) end end
+            end
+        end
+    end
+})
+
+------------------------------------------------
+-- [ TAB 3: INVENTORY MANAGEMENT ] (เพิ่มใหม่)
+------------------------------------------------
+InventoryTab:Section({ Title = "เก็บของเข้าตู้" })
+
+InventoryTab:Input({
+    Title = "ชื่อไอเท็ม",
+    Desc = "พิมพ์ชื่อไอเท็มในกระเป๋าที่ต้องการเก็บ",
+    Placeholder = "เช่น M4A1, Katana, Wood...",
+    Callback = function(v)
+        selectedItemToStore = v
+    end
+})
+
+InventoryTab:Button({
+    Title = "ยืนยันการเก็บไอเท็ม",
+    Desc = "ส่งไอเท็มที่พิมพ์ชื่อไว้ไปที่ตู้เก็บของ",
+    Icon = "archive",
+    Callback = function()
+        if selectedItemToStore ~= "" then
+            local args = {
+                "Change",
+                selectedItemToStore,
+                "Backpack"
+            }
+            local invEvent = ReplicatedStorage:WaitForChild("Inventory", 5)
+            if invEvent then
+                invEvent:FireServer(unpack(args))
+                WindUI:Notify({ Title = "ดำเนินการ", Content = "กำลังเก็บ " .. selectedItemToStore .. " เข้าตู้", Duration = 2 })
+            end
+        else
+            WindUI:Notify({ Title = "แจ้งเตือน", Content = "พี่ต้องพิมพ์ชื่อไอเท็มก่อนนะ!", Duration = 3 })
+        end
+    end
+})
+
+InventoryTab:Section({ Title = "ฟังก์ชั่นพิเศษ" })
+
+InventoryTab:Button({
+    Title = "เก็บของทุกอย่างในตัว (กวาดลงตู้)",
+    Desc = "กวาดไอเท็มทั้งหมดในกระเป๋าเรายัดลงตู้ทันที!",
+    Icon = "shopping-cart",
+    Callback = function()
+        local bp = LocalPlayer:FindFirstChild("Backpack")
+        if bp then
+            local tools = bp:GetChildren()
+            if #tools == 0 then WindUI:Notify({ Title = "ว่างเปล่า", Content = "ไม่มีของให้เก็บแล้วพี่", Duration = 2 }) return end
+            
+            for _, tool in pairs(tools) do
+                if tool:IsA("Tool") then
+                    local args = { "Change", tool.Name, "Backpack" }
+                    ReplicatedStorage:WaitForChild("Inventory"):FireServer(unpack(args))
+                end
+            end
+            WindUI:Notify({ Title = "สำเร็จ", Content = "กวาดของลงตู้เรียบร้อย!", Duration = 3 })
+        end
+    end
+})
+
+------------------------------------------------
+-- [ TAB 4: VISUAL ]
+------------------------------------------------
+VisualTab:Section({ Title = "การมองเห็น" })
+
+VisualTab:Toggle({
+    Title = "เปิดมองทะลุคน (ESP)",
+    Desc = "เห็นคนเป็นสีรุ้งทะลุกำแพง มองง่ายไม่หลง",
+    Value = false,
+    Callback = function(v)
+        states.espEnabled = v
+    end
+})
+
+------------------------------------------------
+-- [ TAB 5: GUN MODS ]
+------------------------------------------------
+GunModTab:Section({ Title = "ปรับแต่งปืนแบบจัดเต็ม" })
+
+local function ApplyGunMod(mode)
+    local char = LocalPlayer.Character
+    local tool = char and char:FindFirstChildOfClass("Tool")
+    if tool and tool:FindFirstChild("Setting") then
+        local ok, gun = pcall(function() return require(tool.Setting) end)
+        if ok then
+            gun.FreezingBullet = false; gun.FlamingBullet = false; gun.ExplosiveEnabled = false
+            gun.ExplosionEnabled = false; gun.Explosive = false
+
+            if mode == "Explosive" then
+                gun.LimitedAmmoEnabled = false; gun.Ammo = 999; gun.MaxAmmo = 999; gun.ReloadTime = 0 
+                gun.Auto = true; gun.Recoil = 0; gun.Accuracy = 1; gun.Spread = 0; gun.BulletSpeed = 2500
+                gun.ExplosiveEnabled = true; gun.ExplosionEnabled = true; gun.Explosive = true
+                gun.ExplosionRadius = 20; gun.ExplosionDamage = 100
+            elseif mode == "Freeze" then
+                gun.LimitedAmmoEnabled = false; gun.Ammo = 999; gun.MaxAmmo = 999; gun.ReloadTime = 0 
+                gun.Auto = true; gun.Recoil = 0; gun.Accuracy = 1; gun.BulletSpeed = 2500
+                gun.FreezingBullet = true; gun.IcifyChance = 100
+            elseif mode == "Fire" then
+                gun.LimitedAmmoEnabled = false; gun.Ammo = 999; gun.MaxAmmo = 999; gun.ReloadTime = 0 
+                gun.Auto = true; gun.Recoil = 0; gun.Accuracy = 1; gun.BulletSpeed = 2500
+                gun.FlamingBullet = true; gun.BurnChance = 100
+            elseif mode == "Normal" then
+                gun.LimitedAmmoEnabled = false; gun.Ammo = 999; gun.MaxAmmo = 999
+                gun.Auto = true; gun.Recoil = 0.1; gun.Accuracy = 0.9; gun.BulletSpeed = 1500
+            end
+            
+            WindUI:Notify({ Title = "ปรับปืนเรียบร้อย", Content = "เปิดโหมด: " .. mode, Duration = 3 })
+            return true
+        end
+    end
+    WindUI:Notify({ Title = "ผิดพลาด", Content = "ถือปืนในมือก่อนกดสิ!", Duration = 3 })
+end
+
+GunModTab:Button({ Title = "กระสุนระเบิด (ตูมตาม)", Desc = "ยิงไปตรงไหนก็ระเบิดเป็นวงกว้าง", Icon = "bomb", Callback = function() ApplyGunMod("Explosive") end })
+GunModTab:Button({ Title = "กระสุนน้ำแข็ง (แช่แข็ง)", Desc = "ยิงแล้วเป้าหมายแข็งทื่อขยับไม่ได้", Icon = "snowflake", Callback = function() ApplyGunMod("Freeze") end })
+GunModTab:Button({ Title = "กระสุนไฟ (เผา)", Desc = "ยิงแล้วไฟลุกติดตัวศัตรู", Icon = "flame", Callback = function() ApplyGunMod("Fire") end })
+GunModTab:Button({ Title = "ปรับแบบพอดี (Normal)", Desc = "เซตค่าแบบคนเล่นปกติ", Icon = "rotate-ccw", Callback = function() ApplyGunMod("Normal") end })
+
+-- [[ CORE SYSTEMS ]] --
+
+-- ESP Setup
+local function ApplyHighlight(p)
+    local function create(c)
+        if not c then return end
+        local h = c:FindFirstChild("WarV2_ESP") or Instance.new("Highlight")
+        h.Name = "WarV2_ESP"
+        h.Parent = c
+        h.FillTransparency = 0.5
+        h.OutlineColor = Color3.new(1,1,1)
+        
+        local conn
+        conn = RunService.RenderStepped:Connect(function()
+            if not c:IsDescendantOf(workspace) or not h.Parent then conn:Disconnect() return end
+            h.Enabled = states.espEnabled
+            if states.espEnabled then h.FillColor = GetBouncingColor() end
+        end)
+    end
+    p.CharacterAdded:Connect(create)
+    if p.Character then create(p.Character) end
+end
+
+for _, p in pairs(Players:GetPlayers()) do if p ~= LocalPlayer then ApplyHighlight(p) end end
+Players.PlayerAdded:Connect(ApplyHighlight)
+
+-- Heartbeat Loop
+RunService.Heartbeat:Connect(function()
+    if states.autoPrompt then
+        pcall(function()
+            for _, v in pairs(workspace:GetDescendants()) do
+                if v:IsA("ProximityPrompt") and v.Enabled then
+                    fireproximityprompt(v)
+                end
+            end
+        end)
+    end
+
+    if states.bouncingHead then
+        local color = GetBouncingColor()
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
+                local h = p.Character.Head
+                h.Size = Vector3.new(5, 5, 5)
+                h.Color = color
+                h.CanCollide = false
+            end
+        end
+    end
+end)
+
+WindUI:Notify({ Title = "พร้อมลุย", Content = "สคริปต์โหลดเสร็จแล้วพี่ชาย!", Duration = 5 })
