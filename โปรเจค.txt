@@ -41,7 +41,7 @@ end)
 
 -- [[ WINDOW SETUP ]] --
 local Window = WindUI:CreateWindow({
-    Title = "WAR SCRIPT V.2 [CLEAN EDITION]",
+    Title = "SCRIPT V1.5 [ยังไม่เสร็จดี]",
     Icon = "rbxassetid://10723343321", 
 })
 
