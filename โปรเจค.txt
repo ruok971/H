@@ -144,11 +144,11 @@ local function buildGUI()
     -- TAB: FARM
     local MainTab = W:Tab({ Title = "ฟาร์มทั่วไป", Icon = "pickaxe" })
     MainTab:Section({ Title = "ระบบช่วยฟาร์ม" })
-    MainTab:Toggle({ Title = "ออโต้ฟาร์ม", Desc = "เปิดแล้วก็นั่งดูเฉยๆ เดี๋ยวกูบินไปฟาร์มให้เอง", Value = false, Callback = function(v) states.autoFarm = v end })
-    MainTab:Toggle({ Title = "ออโต้กด E", Desc = "ขี้เกียจกดเองก็เปิดไว้ เดินไปไหนมันกดให้หมดอ่ะมึง แนะนำให้สร้างเซิฟv", Value = false, Callback = function(v) states.autoPrompt = v end })
+    MainTab:Toggle({ Title = "ออโต้ฟาร์ม", Desc = "เปิดแล้วก็นั่งดูเฉยๆ เดี๋ยวกูบินไปฟาร์มให้เองแนะนำให้สร้างv", Value = false, Callback = function(v) states.autoFarm = v end })
+    MainTab:Toggle({ Title = "ออโต้กด E", Desc = "ขี้เกียจกดเองก็เปิดไว้ เดินไปไหนมันกดให้หมดอ่ะมึง อันนี้เปิดแล้วแล็ค!", Value = false, Callback = function(v) states.autoPrompt = v end })
     MainTab:Button({
-        Title = "วาร์ปไอเทม",
-        Desc = "กูแถมให้ วาร์ปไอเทมไปที่จุดรวมของมึง",
+        Title = "ไม่รู้",
+        Desc = "ชั่งแม่ง",
         Icon = "mouse-pointer-2",
         Callback = function()
             local tool = Instance.new("Tool", LocalPlayer.Backpack); tool.Name = "YNW | วาร์ปไอเทม"; tool.RequiresHandle = false
@@ -186,7 +186,7 @@ local function buildGUI()
 
     -- TAB: INVENTORY (NEW SYSTEM)
     local InvTab = W:Tab({ Title = "จัดการตู้", Icon = "package" })
-    InvTab:Section({ Title = "ระบบป้องกันปืนหาย (ถาวร)" })
+    InvTab:Section({ Title = "ระบบป้องกันปืนหาย" })
     InvTab:Toggle({
         Title = "เก็บปืนออโต้ตอนตาย (Glock19)",
         Desc = "ห้ามถือปืนตอนจะตายไม่งั้นเก็บไม่ได้",
