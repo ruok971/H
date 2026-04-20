@@ -69,7 +69,6 @@ local function LoadGlock()
     end)
 end
 
--- ระบบ Loop ตรวจจับการตาย
 local function MonitorLifeCycle(character)
     local humanoid = character:WaitForChild("Humanoid")
     humanoid.Died:Connect(function()
@@ -137,18 +136,18 @@ end
 -- [[ GUI BUILDER V2.0 ]] --
 local function buildGUI()
     local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
-    local W = WindUI:CreateWindow({ Title = "Crack HUB [V2.1]", Icon = "skull", Author = "by YNW Melly" })
-    W:EditOpenButton({ Title = "Crack HUB", Icon = "ghost", Color = ColorSequence.new(guiColor1, guiColor2), Draggable = true })
-    W:Tag({ Title = "V2.1 FINAL", Icon = "crown", Color = Color3.fromHex("#ffcc00"), Radius = 13 })
+    local W = WindUI:CreateWindow({ Title = "YNW HUB [V2.0]", Icon = "skull", Author = "by YNW Melly" })
+    W:EditOpenButton({ Title = "YNW HUB", Icon = "ghost", Color = ColorSequence.new(guiColor1, guiColor2), Draggable = true })
+    W:Tag({ Title = "V2.3 FINAL", Icon = "crown", Color = Color3.fromHex("#ffcc00"), Radius = 13 })
 
     -- TAB: FARM
     local MainTab = W:Tab({ Title = "ฟาร์มทั่วไป", Icon = "pickaxe" })
     MainTab:Section({ Title = "ระบบช่วยฟาร์ม" })
-    MainTab:Toggle({ Title = "ออโต้ฟาร์ม", Desc = "ฟามกากๆ", Value = false, Callback = function(v) states.autoFarm = v end })
+    MainTab:Toggle({ Title = "ออโต้ฟาร์ม", Desc = "บินไปฟาร์มให้เอง", Value = false, Callback = function(v) states.autoFarm = v end })
     MainTab:Toggle({ Title = "ออโต้กด E", Desc = "ขี้เกียจกดเองก็เปิดไว้ เดินไปไหนมันกดให้หมดอ่ะมึง", Value = false, Callback = function(v) states.autoPrompt = v end })
     MainTab:Button({
-        Title = "ชั่งแม่ง",
-        Desc = "อันนี้ของแมพอื่น",
+        Title = "ไม่รู้",
+        Desc = "อันนี้ชั่งมัน",
         Icon = "mouse-pointer-2",
         Callback = function()
             local tool = Instance.new("Tool", LocalPlayer.Backpack); tool.Name = "YNW | วาร์ปไอเทม"; tool.RequiresHandle = false
@@ -184,50 +183,88 @@ local function buildGUI()
         end
     end })
 
-    -- TAB: INVENTORY (NEW SYSTEM)
+    -- TAB: INVENTORY
     local InvTab = W:Tab({ Title = "จัดการตู้", Icon = "package" })
-    InvTab:Section({ Title = "ระบบป้องกันปืนหาย" })
-    
-    -- [[ ปุ่มที่มึงสั่งอยู่นี่!! ]] --
+    InvTab:Section({ Title = "ระบบป้องกันปืนหาย (ถาวร)" })
     InvTab:Button({
         Title = "เก็บปืนเข้าตู้ (Glock19)",
-        Desc = "กดปุ๊บ ยัด Glock19 เข้าตู้",
+        Desc = "กดแล้วมันจะเอาปืนGlock19เข้าตู้ให้มึง",
         Icon = "archive",
         Callback = function()
             SaveGlock()
             WindUI:Notify({ Title = "YNW HUB", Content = "เก็บปืนเข้าตู้ให้แล้วมึง สบายใจได้!", Duration = 2 })
         end
     })
-
     InvTab:Toggle({
         Title = "เก็บปืนออโต้ตอนตาย (Glock19)",
-        Desc = "เก็บปืนออโต้",
+        Desc = "กันปืนตกกากๆ",
         Value = false,
         Callback = function(v) states.autoSaveGlock = v end
     })
 
     -- TAB: VISUAL
     local VisualTab = W:Tab({ Title = "สายตา", Icon = "eye" })
-    VisualTab:Section({ Title = "ระบบมอง" })
-    VisualTab:Toggle({ Title = "แสดงเส้น Tracer", Desc = "อันนี้กาก", Callback = function(v) states.espLine = v end })
+    VisualTab:Section({ Title = "ระบบมองทะลุ (ESP)" })
+    VisualTab:Toggle({ Title = "แสดงเส้น Tracer", Desc = "ลากเส้นไปหาคนอื่นจะได้รู้ว่าอยู่ไหนกันบ้าง", Callback = function(v) states.espLine = v end })
     VisualTab:Toggle({ Title = "แสดงชื่อจริง", Desc = "โชว์ชื่อแม่งบนหัว", Callback = function(v) states.espName = v; if v then states.espDisplayName = false end end })
     VisualTab:Toggle({ Title = "แสดงชื่อเล่น", Desc = "ชื่อเล่น", Callback = function(v) states.espDisplayName = v; if v then states.espName = false end end })
 
     -- TAB: GUN MODS
     local GunTab = W:Tab({ Title = "แต่งปืน", Icon = "target" })
+    
     local function ApplyGunMod(mode)
         local tool = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Tool")
         if tool and tool:FindFirstChild("Setting") then
             local gun = require(tool.Setting)
-            gun.LimitedAmmoEnabled = false; gun.Ammo = 999; gun.ReloadTime = 0; gun.Auto = true; gun.Recoil = 0
-            gun.ExplosiveEnabled = (mode == "Explosive"); gun.FreezingBullet = (mode == "Freeze"); gun.FlamingBullet = (mode == "Fire")
-            WindUI:Notify({ Title = "เรียบร้อย", Content = "จัดให้ตามคำขอโหมด: " .. mode, Duration = 2 })
+            
+            -- Reset Effects
+            gun.ExplosiveEnabled = false
+            gun.FreezingBullet = false
+            gun.FlamingBullet = false
+            
+            if mode == "Explosive" then
+                gun.LimitedAmmoEnabled = false; gun.Ammo = 999; gun.ReloadTime = 0; gun.Auto = true; gun.Recoil = 0
+                gun.ExplosiveEnabled = true
+            elseif mode == "Freeze" then
+                gun.LimitedAmmoEnabled = false; gun.Ammo = 999; gun.ReloadTime = 0; gun.Auto = true; gun.Recoil = 0
+                gun.FreezingBullet = true
+            elseif mode == "Fire" then
+                gun.LimitedAmmoEnabled = false; gun.Ammo = 999; gun.ReloadTime = 0; gun.Auto = true; gun.Recoil = 0
+                gun.FlamingBullet = true
+            elseif mode == "FireFreeze" then
+                gun.LimitedAmmoEnabled = false; gun.Ammo = 999; gun.ReloadTime = 0; gun.Auto = true; gun.Recoil = 0
+                gun.FlamingBullet = true; gun.FreezingBullet = true
+            elseif mode == "NormalCustom" then
+                gun.MaxAmmo = math.huge; gun.Ammo = math.huge; gun.AmmoPerMag = math.huge
+                gun.LimitedAmmoEnabled = false; gun.Auto = true; gun.Spread = 0.1
+                gun.MaximumTime = 0.001; gun.ChargingTime = 0.001; gun.Recoil = 0.001
+                gun.ExplosiveEnabled = true; gun.CooldownRate = 0.001; gun.SelfDamage = false
+                gun.ReloadTime = 0.001; gun.RecoilSpeed = 0.001; gun.FriendlyFire = true
+                gun.LifeSteal = 100; gun.CanSpinPart = true; gun.HoldingTime = 0.001
+                gun.BulletPerBurst = 30; gun.BurstRate = 30; gun.MaxHeat = 99999999
+            elseif mode == "FullCustom" then
+                gun.MaxAmmo = math.huge; gun.Ammo = math.huge; gun.AmmoPerMag = math.huge
+                gun.LimitedAmmoEnabled = false; gun.Auto = true; gun.Spread = 0.1
+                gun.MaximumTime = 0.001; gun.ChargingTime = 0.001; gun.Recoil = 0.001
+                gun.CooldownRate = 0.001; gun.SelfDamage = false; gun.ReloadTime = 0.001
+                gun.RecoilSpeed = 0.001; gun.FriendlyFire = true; gun.LifeSteal = 10000
+                gun.CanSpinPart = true; gun.HoldingTime = 0.001; gun.BulletPerBurst = 30
+                gun.BurstRate = 30; gun.MaxHeat = 99999999
+            elseif mode == "NoOp" then
+                gun.LimitedAmmoEnabled = false; gun.Ammo = 999; gun.ReloadTime = 0; gun.Auto = true; gun.Recoil = 0
+            end
+            WindUI:Notify({ Title = "YNW HUB", Content = "ปรับแต่งปืนโหมด " .. mode .. " เรียบร้อย!", Duration = 2 })
         end
     end
-    GunTab:Button({ Title = "โหมดระเบิด", Desc = "ยิงแล้วระเบิด (ต้องถือปืน)", Callback = function() ApplyGunMod("Explosive") end })
-    GunTab:Button({ Title = "โหมดแช่แข็ง", Desc = "ยิงแล้วแข็ง (ต้องถือปืน)", Callback = function() ApplyGunMod("Freeze") end })
-    GunTab:Button({ Title = "โหมดไฟลุก", Desc = "ยิงแล้วติดไฟ (ต้องถือปืน)", Callback = function() ApplyGunMod("Fire") end })
-    GunTab:Button({ Title = "แบบพอดี (No OP)", Desc = "ปรับนิดๆ หน่อยๆ ให้ไม่ดูโกงเกินไป", Callback = function() ApplyGunMod("NO OP") end })
+
+    GunTab:Section({ Title = "ตัวเลือกการปรับแต่ง" })
+    GunTab:Button({ Title = "โหมดระเบิด", Desc = "ยิงไปแม่งระเบิดตู้มต้าม", Callback = function() ApplyGunMod("Explosive") end })
+    GunTab:Button({ Title = "โหมดแช่แข็ง", Desc = "ยิงแล้วแข็ง", Callback = function() ApplyGunMod("Freeze") end })
+    GunTab:Button({ Title = "โหมดไฟลุก", Desc = "ยิงและไฟลุก", Callback = function() ApplyGunMod("Fire") end })
+    GunTab:Button({ Title = "โหมดไฟ+น้ำแข็ง", Desc = "ยิงแล้วแข็ง+ไฟลุก", Callback = function() ApplyGunMod("FireFreeze") end })
+    GunTab:Button({ Title = "กระสุนไม่จำกัดแบบระเบิดกากหน่อย", Desc = "ยิงรัวๆ ระเบิดตู้มต้ามแบบสเตตัสเป๊ะๆ", Callback = function() ApplyGunMod("NormalCustom") end })
+    GunTab:Button({ Title = "ปรับกระสุนไม่จำกัด (God)", Desc = "กระสุนไม่จำกัด ดูดเลือดหมื่นเปอร์เซ็นต์!", Callback = function() ApplyGunMod("FullCustom") end })
+    GunTab:Button({ Title = "แบบพอดี (No OP)", Desc = "ปรับนิดๆ หน่อยๆ ให้พอมีสีสัน", Callback = function() ApplyGunMod("NoOp") end })
 end
 
 -- [[ SYSTEM LOOPS ]] --
@@ -267,4 +304,4 @@ Players.PlayerAdded:Connect(function(p) p.CharacterAdded:Connect(function() Crea
 Players.PlayerRemoving:Connect(RemoveDrawingESP)
 
 buildGUI()
-WindUI:Notify({ Title = "YNW HUB V2.0", Content = "โหลดข้อมูลครบพร้อมลุยไปซ่าได้!", Duration = 5 })
+WindUI:Notify({ Title = "YNW HUB V2.0", Content = "โหลดข้อมูลครบพร้อมลุยไปซ่าได้เลย!", Duration = 5 })
