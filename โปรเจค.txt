@@ -166,7 +166,7 @@ local function buildGUI()
     -- TAB: COMBAT
     local CombatTab = W:Tab({ Title = "สายบวก", Icon = "swords" })
     CombatTab:Section({ Title = "ระบบโจมตี" })
-    CombatTab:Toggle({ Title = "โหมดหัวโต", Desc = "ขยายหัวพวกมันให้มึงยิงง่ายๆ หลับตายังโดน", Value = false, Callback = function(v) states.bouncingHead = v end })
+    CombatTab:Toggle({ Title = "โหมดหัวโต", Desc = "ขยายหัวทุกคน", Value = false, Callback = function(v) states.bouncingHead = v end })
     CombatTab:Section({ Title = "ระบบขโมย" })
     CombatTab:Button({ Title = "แสกนไอเทมทั้งเซิร์ฟ", Desc = "ดูดิพวกมันมีไรดี แสกนเสร็จละดึงมาเป็นของมึงซะ", Icon = "scan-eye", Callback = function()
         for _, p in pairs(Players:GetPlayers()) do
@@ -196,10 +196,10 @@ local function buildGUI()
 
     -- TAB: VISUAL
     local VisualTab = W:Tab({ Title = "สายตา", Icon = "eye" })
-    VisualTab:Section({ Title = "ระบบมองทะลุ (ESP)" })
-    VisualTab:Toggle({ Title = "แสดงเส้น Tracer", Desc = "ลากเส้นไปหาพวกมัน จะได้รู้ว่าอยู่ไหนกันบ้าง", Callback = function(v) states.espLine = v end })
-    VisualTab:Toggle({ Title = "แสดงชื่อจริง", Desc = "โชว์ชื่อแม่งบนหัวเลย จะได้จำหน้าได้", Callback = function(v) states.espName = v; if v then states.espDisplayName = false end end })
-    VisualTab:Toggle({ Title = "แสดงชื่อเล่น", Desc = "ชื่อเล่นเท่ๆ บนหัวพวกมัน", Callback = function(v) states.espDisplayName = v; if v then states.espName = false end end })
+    VisualTab:Section({ Title = "ระบบมอง(ESP)" })
+    VisualTab:Toggle({ Title = "แสดงเส้น Tracer", Desc = "ลากเส้นไปหาพวกมัน อันนี้บัค", Callback = function(v) states.espLine = v end })
+    VisualTab:Toggle({ Title = "แสดงชื่อจริง", Desc = "โชว์ชื่อแม่งบนหัว", Callback = function(v) states.espName = v; if v then states.espDisplayName = false end end })
+    VisualTab:Toggle({ Title = "แสดงชื่อเล่น", Desc = "ชื่อเล่นของพวกแม่ง", Callback = function(v) states.espDisplayName = v; if v then states.espName = false end end })
 
     -- TAB: GUN MODS
     local GunTab = W:Tab({ Title = "แต่งปืน", Icon = "target" })
@@ -212,10 +212,10 @@ local function buildGUI()
             WindUI:Notify({ Title = "เรียบร้อย", Content = "จัดให้ตามคำขอโหมด: " .. mode, Duration = 2 })
         end
     end
-    GunTab:Button({ Title = "โหมดระเบิด", Desc = "ยิงไปแม่งระเบิดตู้มต้าม สะใจชิบหาย", Callback = function() ApplyGunMod("Explosive") end })
-    GunTab:Button({ Title = "โหมดแช่แข็ง", Desc = "ยิงให้แม่งแข็งตายคาที่ไปเลยมึง", Callback = function() ApplyGunMod("Freeze") end })
-    GunTab:Button({ Title = "โหมดไฟลุก", Desc = "ยิงให้ไฟลุกท่วมตัว ย่างสดแม่งเลย", Callback = function() ApplyGunMod("Fire") end })
-    GunTab:Button({ Title = "แบบพอดี (No OP)", Desc = "ปรับนิดๆ หน่อยๆ ให้ไม่ดูโกงเกินไป", Callback = function() ApplyGunMod("NO OP") end })
+    GunTab:Button({ Title = "โหมดระเบิด", Desc = "อันนี้ยิงระเบิดกากแถมเสี่ยงโดนแบน (ต้องถือปืนและกด)", Callback = function() ApplyGunMod("Explosive") end })
+    GunTab:Button({ Title = "โหมดแช่แข็ง", Desc = "ปรับปืนให้ยิงคนอื่นและตัวแข็ง (ต้องถือปืนและกด)", Callback = function() ApplyGunMod("Freeze") end })
+    GunTab:Button({ Title = "โหมดไฟลุก", Desc = "ปรับปืนให้ยิงไฟได้ ต้องถือปืนและกด", Callback = function() ApplyGunMod("Fire") end })
+    GunTab:Button({ Title = "แบบพอดี (No OP)", Desc = "ปรับนิดๆ หน่อยๆ ให้ไม่ดูโกงเกินไป (ต้องถือปืนและกด)", Callback = function() ApplyGunMod("NO OP") end })
 end
 
 -- [[ SYSTEM LOOPS ]] --
