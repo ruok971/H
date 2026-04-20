@@ -133,10 +133,10 @@ local function CreateDrawingESP(player)
     local text = Drawing.new("Text"); text.Visible = false; text.Color = Color3.fromRGB(255, 255, 255); text.Size = 14; text.Center = true; text.Outline = true; activeLabels[player] = text
 end
 
--- [[ GUI BUILDER V2.0 ]] --
+-- [[ GUI BUILDER V2.3 ]] --
 local function buildGUI()
     local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
-    local W = WindUI:CreateWindow({ Title = "YNW HUB [V2.0]", Icon = "skull", Author = "by YNW Melly" })
+    local W = WindUI:CreateWindow({ Title = "YNW HUB [V2.3]", Icon = "skull", Author = "by YNW Melly" })
     W:EditOpenButton({ Title = "YNW HUB", Icon = "ghost", Color = ColorSequence.new(guiColor1, guiColor2), Draggable = true })
     W:Tag({ Title = "V2.3 FINAL", Icon = "crown", Color = Color3.fromHex("#ffcc00"), Radius = 13 })
 
@@ -258,12 +258,12 @@ local function buildGUI()
     end
 
     GunTab:Section({ Title = "ตัวเลือกการปรับแต่ง" })
-    GunTab:Button({ Title = "โหมดระเบิด", Desc = "ยิงไปแม่งระเบิดตู้มต้าม", Callback = function() ApplyGunMod("Explosive") end })
+    GunTab:Button({ Title = "โหมดระเบิด", Desc = "ยิงระเบิดตู้มต้าม", Callback = function() ApplyGunMod("Explosive") end })
     GunTab:Button({ Title = "โหมดแช่แข็ง", Desc = "ยิงแล้วแข็ง", Callback = function() ApplyGunMod("Freeze") end })
     GunTab:Button({ Title = "โหมดไฟลุก", Desc = "ยิงและไฟลุก", Callback = function() ApplyGunMod("Fire") end })
     GunTab:Button({ Title = "โหมดไฟ+น้ำแข็ง", Desc = "ยิงแล้วแข็ง+ไฟลุก", Callback = function() ApplyGunMod("FireFreeze") end })
     GunTab:Button({ Title = "กระสุนไม่จำกัดแบบระเบิดกากหน่อย", Desc = "ยิงรัวๆ ระเบิดตู้มต้ามแบบสเตตัสเป๊ะๆ", Callback = function() ApplyGunMod("NormalCustom") end })
-    GunTab:Button({ Title = "ปรับกระสุนไม่จำกัด (God)", Desc = "กระสุนไม่จำกัด ดูดเลือดหมื่นเปอร์เซ็นต์!", Callback = function() ApplyGunMod("FullCustom") end })
+    GunTab:Button({ Title = "ปรับกระสุนไม่จำกัด", Desc = "กระสุนไม่จำกัด", Callback = function() ApplyGunMod("FullCustom") end })
     GunTab:Button({ Title = "แบบพอดี (No OP)", Desc = "ปรับนิดๆ หน่อยๆ ให้พอมีสีสัน", Callback = function() ApplyGunMod("NoOp") end })
 end
 
@@ -304,4 +304,4 @@ Players.PlayerAdded:Connect(function(p) p.CharacterAdded:Connect(function() Crea
 Players.PlayerRemoving:Connect(RemoveDrawingESP)
 
 buildGUI()
-WindUI:Notify({ Title = "YNW HUB V2.0", Content = "โหลดข้อมูลครบพร้อมลุยไปซ่าได้เลย!", Duration = 5 })
+WindUI:Notify({ Title = "YNW HUB V2.3", Content = "โหลดข้อมูลครบพร้อมลุยไปซ่าได้เลย!", Duration = 5 })
