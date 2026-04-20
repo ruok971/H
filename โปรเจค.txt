@@ -22,7 +22,7 @@ local states = {
     espName = false,      
     espDisplayName = false,
     autoFarm = false,
-    autoSaveGlock = false -- ระบบเซฟปืนถาวร
+    autoSaveGlock = false 
 }
 local farmCooldowns = {} 
 local TELEPORT_COORD = Vector3.new(-260, 14, 1164)
@@ -69,14 +69,14 @@ local function LoadGlock()
     end)
 end
 
--- ระบบ Loop ตรวจจับการตาย (ทำงานถาวร)
+-- ระบบ Loop ตรวจจับการตาย
 local function MonitorLifeCycle(character)
     local humanoid = character:WaitForChild("Humanoid")
     humanoid.Died:Connect(function()
         if states.autoSaveGlock then
-            SaveGlock() -- เก็บปืนตอนตาย
-            LocalPlayer.CharacterAdded:Wait() -- รอเกิดใหม่
-            LoadGlock() -- หยิบปืนออกมา
+            SaveGlock() 
+            LocalPlayer.CharacterAdded:Wait() 
+            LoadGlock() 
         end
     end)
 end
@@ -137,18 +137,18 @@ end
 -- [[ GUI BUILDER V2.0 ]] --
 local function buildGUI()
     local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
-    local W = WindUI:CreateWindow({ Title = "YNW HUB [V2.0]", Icon = "skull", Author = "by YNW Melly" })
-    W:EditOpenButton({ Title = "YNW HUB", Icon = "ghost", Color = ColorSequence.new(guiColor1, guiColor2), Draggable = true })
-    W:Tag({ Title = "V2.0 FINAL", Icon = "crown", Color = Color3.fromHex("#ffcc00"), Radius = 13 })
+    local W = WindUI:CreateWindow({ Title = "Crack HUB [V2.1]", Icon = "skull", Author = "by YNW Melly" })
+    W:EditOpenButton({ Title = "Crack HUB", Icon = "ghost", Color = ColorSequence.new(guiColor1, guiColor2), Draggable = true })
+    W:Tag({ Title = "V2.1 FINAL", Icon = "crown", Color = Color3.fromHex("#ffcc00"), Radius = 13 })
 
     -- TAB: FARM
     local MainTab = W:Tab({ Title = "ฟาร์มทั่วไป", Icon = "pickaxe" })
     MainTab:Section({ Title = "ระบบช่วยฟาร์ม" })
-    MainTab:Toggle({ Title = "ออโต้ฟาร์ม", Desc = "เปิดแล้วก็นั่งดูเฉยๆ เดี๋ยวกูบินไปฟาร์มให้เองแนะนำให้สร้างv", Value = false, Callback = function(v) states.autoFarm = v end })
-    MainTab:Toggle({ Title = "ออโต้กด E", Desc = "ขี้เกียจกดเองก็เปิดไว้ เดินไปไหนมันกดให้หมดอ่ะมึง อันนี้เปิดแล้วแล็ค!", Value = false, Callback = function(v) states.autoPrompt = v end })
+    MainTab:Toggle({ Title = "ออโต้ฟาร์ม", Desc = "ฟามกากๆ", Value = false, Callback = function(v) states.autoFarm = v end })
+    MainTab:Toggle({ Title = "ออโต้กด E", Desc = "ขี้เกียจกดเองก็เปิดไว้ เดินไปไหนมันกดให้หมดอ่ะมึง", Value = false, Callback = function(v) states.autoPrompt = v end })
     MainTab:Button({
-        Title = "ไม่รู้",
-        Desc = "ชั่งแม่ง",
+        Title = "ชั่งแม่ง",
+        Desc = "อันนี้ของแมพอื่น",
         Icon = "mouse-pointer-2",
         Callback = function()
             local tool = Instance.new("Tool", LocalPlayer.Backpack); tool.Name = "YNW | วาร์ปไอเทม"; tool.RequiresHandle = false
@@ -166,7 +166,7 @@ local function buildGUI()
     -- TAB: COMBAT
     local CombatTab = W:Tab({ Title = "สายบวก", Icon = "swords" })
     CombatTab:Section({ Title = "ระบบโจมตี" })
-    CombatTab:Toggle({ Title = "โหมดหัวโต", Desc = "ขยายหัวทุกคน", Value = false, Callback = function(v) states.bouncingHead = v end })
+    CombatTab:Toggle({ Title = "โหมดหัวโต", Desc = "ขยายหัวพวกมันให้มึงยิงง่ายๆ หลับตายังโดน", Value = false, Callback = function(v) states.bouncingHead = v end })
     CombatTab:Section({ Title = "ระบบขโมย" })
     CombatTab:Button({ Title = "แสกนไอเทมทั้งเซิร์ฟ", Desc = "ดูดิพวกมันมีไรดี แสกนเสร็จละดึงมาเป็นของมึงซะ", Icon = "scan-eye", Callback = function()
         for _, p in pairs(Players:GetPlayers()) do
@@ -187,19 +187,31 @@ local function buildGUI()
     -- TAB: INVENTORY (NEW SYSTEM)
     local InvTab = W:Tab({ Title = "จัดการตู้", Icon = "package" })
     InvTab:Section({ Title = "ระบบป้องกันปืนหาย" })
+    
+    -- [[ ปุ่มที่มึงสั่งอยู่นี่!! ]] --
+    InvTab:Button({
+        Title = "เก็บปืนเข้าตู้ (Glock19)",
+        Desc = "กดปุ๊บ ยัด Glock19 เข้าตู้",
+        Icon = "archive",
+        Callback = function()
+            SaveGlock()
+            WindUI:Notify({ Title = "YNW HUB", Content = "เก็บปืนเข้าตู้ให้แล้วมึง สบายใจได้!", Duration = 2 })
+        end
+    })
+
     InvTab:Toggle({
         Title = "เก็บปืนออโต้ตอนตาย (Glock19)",
-        Desc = "ห้ามถือปืนตอนจะตายไม่งั้นเก็บไม่ได้",
+        Desc = "เก็บปืนออโต้",
         Value = false,
         Callback = function(v) states.autoSaveGlock = v end
     })
 
     -- TAB: VISUAL
     local VisualTab = W:Tab({ Title = "สายตา", Icon = "eye" })
-    VisualTab:Section({ Title = "ระบบมอง(ESP)" })
-    VisualTab:Toggle({ Title = "แสดงเส้น Tracer", Desc = "ลากเส้นไปหาพวกมัน อันนี้บัค", Callback = function(v) states.espLine = v end })
+    VisualTab:Section({ Title = "ระบบมอง" })
+    VisualTab:Toggle({ Title = "แสดงเส้น Tracer", Desc = "อันนี้กาก", Callback = function(v) states.espLine = v end })
     VisualTab:Toggle({ Title = "แสดงชื่อจริง", Desc = "โชว์ชื่อแม่งบนหัว", Callback = function(v) states.espName = v; if v then states.espDisplayName = false end end })
-    VisualTab:Toggle({ Title = "แสดงชื่อเล่น", Desc = "ชื่อเล่นของพวกแม่ง", Callback = function(v) states.espDisplayName = v; if v then states.espName = false end end })
+    VisualTab:Toggle({ Title = "แสดงชื่อเล่น", Desc = "ชื่อเล่น", Callback = function(v) states.espDisplayName = v; if v then states.espName = false end end })
 
     -- TAB: GUN MODS
     local GunTab = W:Tab({ Title = "แต่งปืน", Icon = "target" })
@@ -212,10 +224,10 @@ local function buildGUI()
             WindUI:Notify({ Title = "เรียบร้อย", Content = "จัดให้ตามคำขอโหมด: " .. mode, Duration = 2 })
         end
     end
-    GunTab:Button({ Title = "โหมดระเบิด", Desc = "อันนี้ยิงระเบิดกากแถมเสี่ยงโดนแบน (ต้องถือปืนและกด)", Callback = function() ApplyGunMod("Explosive") end })
-    GunTab:Button({ Title = "โหมดแช่แข็ง", Desc = "ปรับปืนให้ยิงคนอื่นและตัวแข็ง (ต้องถือปืนและกด)", Callback = function() ApplyGunMod("Freeze") end })
-    GunTab:Button({ Title = "โหมดไฟลุก", Desc = "ปรับปืนให้ยิงไฟได้ ต้องถือปืนและกด", Callback = function() ApplyGunMod("Fire") end })
-    GunTab:Button({ Title = "แบบพอดี (No OP)", Desc = "ปรับนิดๆ หน่อยๆ ให้ไม่ดูโกงเกินไป (ต้องถือปืนและกด)", Callback = function() ApplyGunMod("NO OP") end })
+    GunTab:Button({ Title = "โหมดระเบิด", Desc = "ยิงแล้วระเบิด (ต้องถือปืน)", Callback = function() ApplyGunMod("Explosive") end })
+    GunTab:Button({ Title = "โหมดแช่แข็ง", Desc = "ยิงแล้วแข็ง (ต้องถือปืน)", Callback = function() ApplyGunMod("Freeze") end })
+    GunTab:Button({ Title = "โหมดไฟลุก", Desc = "ยิงแล้วติดไฟ (ต้องถือปืน)", Callback = function() ApplyGunMod("Fire") end })
+    GunTab:Button({ Title = "แบบพอดี (No OP)", Desc = "ปรับนิดๆ หน่อยๆ ให้ไม่ดูโกงเกินไป", Callback = function() ApplyGunMod("NO OP") end })
 end
 
 -- [[ SYSTEM LOOPS ]] --
@@ -255,5 +267,4 @@ Players.PlayerAdded:Connect(function(p) p.CharacterAdded:Connect(function() Crea
 Players.PlayerRemoving:Connect(RemoveDrawingESP)
 
 buildGUI()
-WindUI:Notify({ Title = "YNW HUB V2.0", Content = "โหลดข้อมูลครบพร้อมลุยไปซ่าได้เลยดิ!", Duration = 5 })
-
+WindUI:Notify({ Title = "YNW HUB V2.0", Content = "โหลดข้อมูลครบพร้อมลุยไปซ่าได้!", Duration = 5 })
