@@ -1,7 +1,6 @@
 -- [[ CONFIG & THEME ]] --
 local guiColor1 = Color3.fromRGB(0, 0, 0)      -- Black
 local guiColor2 = Color3.fromRGB(255, 0, 0)    -- Neon Red
-local windUIGuis = {}
 
 -- [[ SERVICES ]] --
 local Players = game:GetService("Players")
@@ -22,10 +21,10 @@ local states = {
     espLine = false,      
     espName = false,      
     espDisplayName = false,
-    autoFarm = false
+    autoFarm = false,
+    autoSaveGlock = false -- ระบบเซฟปืนถาวร
 }
 local farmCooldowns = {} 
-local selectedItemToStore = ""
 local TELEPORT_COORD = Vector3.new(-260, 14, 1164)
 local FARM_CENTER = Vector3.new(544, 13, -865)
 
@@ -38,8 +37,7 @@ local function SmartPressE(prompt)
     if not prompt or not prompt.Enabled then return end
     task.spawn(function()
         prompt:InputHoldBegin()
-        local duration = prompt.HoldDuration or 0
-        task.wait(duration + 0.1)
+        task.wait((prompt.HoldDuration or 0) + 0.1)
         prompt:InputHoldEnd()
         fireproximityprompt(prompt)
     end)
@@ -49,12 +47,42 @@ local function FlyTo(targetCFrame, speed)
     local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
     local distance = (hrp.Position - targetCFrame.Position).Magnitude
-    local duration = distance / speed
-    local info = TweenInfo.new(duration, Enum.EasingStyle.Linear)
+    local info = TweenInfo.new(distance / speed, Enum.EasingStyle.Linear)
     local tween = TweenService:Create(hrp, info, {CFrame = targetCFrame})
     tween:Play()
     tween.Completed:Wait()
 end
+
+-- [[ BYTENET SYSTEM (GLOCK19) ]] --
+local function SaveGlock()
+    pcall(function()
+        local args = { buffer.fromstring("\003\006\000Change\a\000Glock19\b\000Backpack") }
+        ReplicatedStorage:WaitForChild("Package"):WaitForChild("ByteNetMax"):WaitForChild("system"):WaitForChild("ByteNetReliable"):FireServer(unpack(args))
+    end)
+end
+
+local function LoadGlock()
+    pcall(function()
+        task.wait(1.2)
+        local args = { buffer.fromstring("\003\006\000Change\a\000Glock19\003\000Inv") }
+        ReplicatedStorage:WaitForChild("Package"):WaitForChild("ByteNetMax"):WaitForChild("system"):WaitForChild("ByteNetReliable"):FireServer(unpack(args))
+    end)
+end
+
+-- ระบบ Loop ตรวจจับการตาย (ทำงานถาวร)
+local function MonitorLifeCycle(character)
+    local humanoid = character:WaitForChild("Humanoid")
+    humanoid.Died:Connect(function()
+        if states.autoSaveGlock then
+            SaveGlock() -- เก็บปืนตอนตาย
+            LocalPlayer.CharacterAdded:Wait() -- รอเกิดใหม่
+            LoadGlock() -- หยิบปืนออกมา
+        end
+    end)
+end
+
+if LocalPlayer.Character then task.spawn(MonitorLifeCycle, LocalPlayer.Character) end
+LocalPlayer.CharacterAdded:Connect(function(char) task.spawn(MonitorLifeCycle, char) end)
 
 -- [[ AUTO FARM SYSTEM ]] --
 task.spawn(function()
@@ -64,7 +92,6 @@ task.spawn(function()
                 local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
                 if hrp then
                     FlyTo(CFrame.new(FARM_CENTER), 100)
-                    task.wait(0.3)
                     local farmFolder = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("จุดฟาร์ม")
                     if farmFolder then
                         local targets = {}
@@ -74,24 +101,18 @@ task.spawn(function()
                                 local dynamicCooldown = math.random(20, 25)
                                 if not farmCooldowns[v] or (tick() - farmCooldowns[v]) > dynamicCooldown then
                                     local pos = v:GetPivot().Position
-                                    local inZone1 = (pos - Vector3.new(562, 13, -865)).Magnitude < 35
-                                    local inZone2 = (pos - Vector3.new(549, 13, -831)).Magnitude < 35
-                                    if inZone1 or inZone2 then table.insert(targets, v) end
+                                    if (pos - Vector3.new(562, 13, -865)).Magnitude < 35 or (pos - Vector3.new(549, 13, -831)).Magnitude < 35 then 
+                                        table.insert(targets, v) 
+                                    end
                                 end
                             end
                         end
                         if #targets > 0 then
                             local selected = targets[math.random(1, #targets)]
                             farmCooldowns[selected] = tick()
-                            local targetPivot = selected:GetPivot()
-                            local offsetCFrame = targetPivot * CFrame.new(0, 2, 4) -- ลอยหน้าไอเทม 4 หน่วย
-                            FlyTo(offsetCFrame, 50)
+                            FlyTo(selected:GetPivot() * CFrame.new(0, 2, 4), 50)
                             local prompt = selected:FindFirstChildWhichIsA("ProximityPrompt", true)
-                            if prompt then
-                                task.wait(0.2)
-                                SmartPressE(prompt)
-                                task.wait((prompt.HoldDuration or 0) + 0.6)
-                            end
+                            if prompt then task.wait(0.2); SmartPressE(prompt); task.wait((prompt.HoldDuration or 0) + 0.6) end
                         end
                     end
                 end
@@ -102,8 +123,7 @@ task.spawn(function()
 end)
 
 -- [[ ESP SYSTEM ]] --
-local activeTracers = {}
-local activeLabels = {}
+local activeTracers, activeLabels = {}, {}
 local function RemoveDrawingESP(player)
     if activeTracers[player] then activeTracers[player]:Remove(); activeTracers[player] = nil end
     if activeLabels[player] then activeLabels[player]:Remove(); activeLabels[player] = nil end
@@ -114,56 +134,21 @@ local function CreateDrawingESP(player)
     local text = Drawing.new("Text"); text.Visible = false; text.Color = Color3.fromRGB(255, 255, 255); text.Size = 14; text.Center = true; text.Outline = true; activeLabels[player] = text
 end
 
-RunService.RenderStepped:Connect(function()
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
-            local head = player.Character.Head
-            local vector, onScreen = Camera:WorldToViewportPoint(head.Position)
-            if activeTracers[player] then
-                activeTracers[player].Visible = states.espLine and onScreen
-                if activeTracers[player].Visible then
-                    activeTracers[player].From = Vector2.new(Camera.ViewportSize.X / 2, 0); activeTracers[player].To = Vector2.new(vector.X, vector.Y)
-                end
-            end
-            if activeLabels[player] then
-                activeLabels[player].Visible = (states.espName or states.espDisplayName) and onScreen
-                if activeLabels[player].Visible then
-                    activeLabels[player].Position = Vector2.new(vector.X, vector.Y - 25)
-                    activeLabels[player].Text = states.espDisplayName and player.DisplayName or player.Name
-                end
-            end
-        else
-            if activeTracers[player] then activeTracers[player].Visible = false end
-            if activeLabels[player] then activeLabels[player].Visible = false end
-        end
-    end
-end)
-
--- [[ GUI BUILDER ]] --
+-- [[ GUI BUILDER V2.0 ]] --
 local function buildGUI()
     local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
-    local W = WindUI:CreateWindow({ Title = "YNW HUB [OP]", Icon = "skull", Author = "by YNW Melly" })
+    local W = WindUI:CreateWindow({ Title = "YNW HUB [V2.0]", Icon = "skull", Author = "by YNW Melly" })
     W:EditOpenButton({ Title = "YNW HUB", Icon = "ghost", Color = ColorSequence.new(guiColor1, guiColor2), Draggable = true })
-    W:Tag({ Title = "v1.9 FINAL", Icon = "crown", Color = Color3.fromHex("#ffcc00"), Radius = 13 })
+    W:Tag({ Title = "V2.0 FINAL", Icon = "crown", Color = Color3.fromHex("#ffcc00"), Radius = 13 })
 
     -- TAB: FARM
     local MainTab = W:Tab({ Title = "ฟาร์มทั่วไป", Icon = "pickaxe" })
     MainTab:Section({ Title = "ระบบช่วยฟาร์ม" })
-    MainTab:Toggle({
-        Title = "ออโต้ฟาร์ม",
-        Desc = "บินฟาร์ม",
-        Value = false,
-        Callback = function(v) states.autoFarm = v end
-    })
-    MainTab:Toggle({
-        Title = "ออโต้กด E",
-        Desc = "กดปุ่ม ProximityPrompt ทุกอย่างที่อยู่ใกล้ตัว",
-        Value = false,
-        Callback = function(v) states.autoPrompt = v end
-    })
+    MainTab:Toggle({ Title = "ออโต้ฟาร์ม", Desc = "เปิดแล้วก็นั่งดูเฉยๆ เดี๋ยวกูบินไปฟาร์มให้เอง", Value = false, Callback = function(v) states.autoFarm = v end })
+    MainTab:Toggle({ Title = "ออโต้กด E", Desc = "ขี้เกียจกดเองก็เปิดไว้ เดินไปไหนมันกดให้หมดอ่ะมึง แนะนำให้สร้างเซิฟv", Value = false, Callback = function(v) states.autoPrompt = v end })
     MainTab:Button({
-        Title = "วาร์ป",
-        Desc = "ชั่งแม่ง",
+        Title = "วาร์ปไอเทม",
+        Desc = "กูแถมให้ วาร์ปไอเทมไปที่จุดรวมของมึง",
         Icon = "mouse-pointer-2",
         Callback = function()
             local tool = Instance.new("Tool", LocalPlayer.Backpack); tool.Name = "YNW | วาร์ปไอเทม"; tool.RequiresHandle = false
@@ -172,8 +157,7 @@ local function buildGUI()
                 local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
                 if hrp and t and t:IsA("BasePart") then
                     t.CFrame = CFrame.new(TELEPORT_COORD)
-                    task.wait(0.1)
-                    hrp.CFrame = CFrame.new(TELEPORT_COORD + Vector3.new(0, 5, 0))
+                    task.wait(0.1); hrp.CFrame = CFrame.new(TELEPORT_COORD + Vector3.new(0, 5, 0))
                 end
             end)
         end
@@ -182,67 +166,40 @@ local function buildGUI()
     -- TAB: COMBAT
     local CombatTab = W:Tab({ Title = "สายบวก", Icon = "swords" })
     CombatTab:Section({ Title = "ระบบโจมตี" })
-    CombatTab:Toggle({
-        Title = "โหมดหัวโต",
-        Desc = "ขยายขนาดหัวศัตรูให้ใหญ่ขึ้นและเปลี่ยนสีเพื่อการยิงที่แม่นยำ",
-        Value = false,
-        Callback = function(v) states.bouncingHead = v end
-    })
+    CombatTab:Toggle({ Title = "โหมดหัวโต", Desc = "ขยายหัวพวกมันให้มึงยิงง่ายๆ หลับตายังโดน", Value = false, Callback = function(v) states.bouncingHead = v end })
     CombatTab:Section({ Title = "ระบบขโมย" })
-    CombatTab:Button({
-        Title = "แสกนไอเทมทั้งเซิร์ฟ",
-        Desc = "แสดงปุ่มเพื่อดึงไอเทมคนอื่นมาที่ตัวเรา",
-        Icon = "scan-eye",
-        Callback = function()
-            for _, p in pairs(Players:GetPlayers()) do
-                if p ~= LocalPlayer then
-                    local function checkTools(parent)
-                        for _, t in pairs(parent:GetChildren()) do
-                            if t:IsA("Tool") and t.Name ~= "Fist" then
-                                CombatTab:Button({ Title = "ขโมยจาก: "..p.DisplayName.." ["..t.Name.."]", Desc = "คลิกเพื่อดึงไอเทมชิ้นนี้เข้ากระเป๋า", Callback = function() t.Parent = LocalPlayer.Backpack end })
-                            end
+    CombatTab:Button({ Title = "แสกนไอเทมทั้งเซิร์ฟ", Desc = "ดูดิพวกมันมีไรดี แสกนเสร็จละดึงมาเป็นของมึงซะ", Icon = "scan-eye", Callback = function()
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer then
+                local function check(parent)
+                    for _, t in pairs(parent:GetChildren()) do
+                        if t:IsA("Tool") and t.Name ~= "Fist" then
+                            CombatTab:Button({ Title = "ขโมย: "..t.Name, Desc = "ไอเทมจาก "..p.DisplayName.." ดึงมาดิรอไร", Callback = function() t.Parent = LocalPlayer.Backpack end })
                         end
                     end
-                    if p:FindFirstChild("Backpack") then checkTools(p.Backpack) end
-                    if p.Character then checkTools(p.Character) end
                 end
+                if p:FindFirstChild("Backpack") then check(p.Backpack) end
+                if p.Character then check(p.Character) end
             end
         end
-    })
+    end })
 
-    -- TAB: INVENTORY
+    -- TAB: INVENTORY (NEW SYSTEM)
     local InvTab = W:Tab({ Title = "จัดการตู้", Icon = "package" })
-    InvTab:Section({ Title = "ระบบจัดการไอเทม" })
-    InvTab:Input({
-        Title = "ระบุชื่อไอเทม",
-        Placeholder = "ชื่อไอเทมที่จะเก็บ...",
-        Desc = "พิมพ์ชื่อไอเทมในกระเป๋าที่ต้องการส่งเข้าตู้เซฟ",
-        Callback = function(v) selectedItemToStore = v end
-    })
-    InvTab:Button({
-        Title = "ส่งไอเทมเข้าตู้",
-        Desc = "ส่งไอเทมตามชื่อที่ระบุไว้เข้าตู้เซฟทันที",
-        Callback = function() 
-            if selectedItemToStore ~= "" then ReplicatedStorage.Inventory:FireServer("Change", selectedItemToStore, "Backpack") end 
-        end
-    })
-    InvTab:Button({
-        Title = "เก็บของทั้งหมด",
-        Desc = "เอาไอเทมทุกอย่างในกระเป๋าเข้าตู้เซฟทั้งหมด",
-        Icon = "archive",
-        Callback = function()
-            for _, t in pairs(LocalPlayer.Backpack:GetChildren()) do
-                if t:IsA("Tool") then ReplicatedStorage.Inventory:FireServer("Change", t.Name, "Backpack") end
-            end
-        end
+    InvTab:Section({ Title = "ระบบป้องกันปืนหาย (ถาวร)" })
+    InvTab:Toggle({
+        Title = "เก็บปืนออโต้ตอนตาย (Glock19)",
+        Desc = "ห้ามถือปืนตอนจะตายไม่งั้นเก็บไม่ได้",
+        Value = false,
+        Callback = function(v) states.autoSaveGlock = v end
     })
 
     -- TAB: VISUAL
     local VisualTab = W:Tab({ Title = "สายตา", Icon = "eye" })
-    VisualTab:Section({ Title = "ระบบมอง" })
-    VisualTab:Toggle({ Title = "แสดงเส้น Tracer", Desc = "ลากเส้นจากกลางจอไปหาผู้เล่นคนอื่น", Callback = function(v) states.espLine = v end })
-    VisualTab:Toggle({ Title = "แสดงชื่อจริง", Desc = "แสดงชื่อของผู้เล่นบนหัว", Callback = function(v) states.espName = v; if v then states.espDisplayName = false end end })
-    VisualTab:Toggle({ Title = "แสดงชื่อเล่น", Desc = "แสดงชื่อเล่นของผู้เล่นบนหัว", Callback = function(v) states.espDisplayName = v; if v then states.espName = false end end })
+    VisualTab:Section({ Title = "ระบบมองทะลุ (ESP)" })
+    VisualTab:Toggle({ Title = "แสดงเส้น Tracer", Desc = "ลากเส้นไปหาพวกมัน จะได้รู้ว่าอยู่ไหนกันบ้าง", Callback = function(v) states.espLine = v end })
+    VisualTab:Toggle({ Title = "แสดงชื่อจริง", Desc = "โชว์ชื่อแม่งบนหัวเลย จะได้จำหน้าได้", Callback = function(v) states.espName = v; if v then states.espDisplayName = false end end })
+    VisualTab:Toggle({ Title = "แสดงชื่อเล่น", Desc = "ชื่อเล่นเท่ๆ บนหัวพวกมัน", Callback = function(v) states.espDisplayName = v; if v then states.espName = false end end })
 
     -- TAB: GUN MODS
     local GunTab = W:Tab({ Title = "แต่งปืน", Icon = "target" })
@@ -252,29 +209,42 @@ local function buildGUI()
             local gun = require(tool.Setting)
             gun.LimitedAmmoEnabled = false; gun.Ammo = 999; gun.ReloadTime = 0; gun.Auto = true; gun.Recoil = 0
             gun.ExplosiveEnabled = (mode == "Explosive"); gun.FreezingBullet = (mode == "Freeze"); gun.FlamingBullet = (mode == "Fire")
-            WindUI:Notify({ Title = "สำเร็จ", Content = "โหมดแต่งปืน: " .. mode, Duration = 2 })
+            WindUI:Notify({ Title = "เรียบร้อย", Content = "จัดให้ตามคำขอโหมด: " .. mode, Duration = 2 })
         end
     end
-    GunTab:Button({ Title = "โหมดระเบิด", Desc = "เปลี่ยนกระสุนธรรมดาให้เป็นระเบิด (ต้องถือปืน)", Callback = function() ApplyGunMod("Explosive") end })
-    GunTab:Button({ Title = "โหมดแช่แข็ง", Desc = "ยิงแล้วศัตรูจะติดสถานะตัวแข็ง (ต้องถือปืน)", Callback = function() ApplyGunMod("Freeze") end })
-    GunTab:Button({ Title = "โหมดไฟลุก", Desc = "ยิงแล้วศัตรูจะติดสถานะไฟไหม้ (ต้องถือปืน)", Callback = function() ApplyGunMod("Fire") end })
-    GunTab:Button({ Title = "แบบพอดี", Desc = "ปรับแบบไม่opเยอะ (ต้องถือปืน)", Callback = function() ApplyGunMod("NO OP") end })
+    GunTab:Button({ Title = "โหมดระเบิด", Desc = "ยิงไปแม่งระเบิดตู้มต้าม สะใจชิบหาย", Callback = function() ApplyGunMod("Explosive") end })
+    GunTab:Button({ Title = "โหมดแช่แข็ง", Desc = "ยิงให้แม่งแข็งตายคาที่ไปเลยมึง", Callback = function() ApplyGunMod("Freeze") end })
+    GunTab:Button({ Title = "โหมดไฟลุก", Desc = "ยิงให้ไฟลุกท่วมตัว ย่างสดแม่งเลย", Callback = function() ApplyGunMod("Fire") end })
+    GunTab:Button({ Title = "แบบพอดี (No OP)", Desc = "ปรับนิดๆ หน่อยๆ ให้ไม่ดูโกงเกินไป", Callback = function() ApplyGunMod("NO OP") end })
 end
 
 -- [[ SYSTEM LOOPS ]] --
+RunService.RenderStepped:Connect(function()
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+            local head = player.Character.Head
+            local vector, onScreen = Camera:WorldToViewportPoint(head.Position)
+            if activeTracers[player] then
+                activeTracers[player].Visible = states.espLine and onScreen
+                if activeTracers[player].Visible then activeTracers[player].From = Vector2.new(Camera.ViewportSize.X/2, 0); activeTracers[player].To = Vector2.new(vector.X, vector.Y) end
+            end
+            if activeLabels[player] then
+                activeLabels[player].Visible = (states.espName or states.espDisplayName) and onScreen
+                if activeLabels[player].Visible then activeLabels[player].Position = Vector2.new(vector.X, vector.Y - 25); activeLabels[player].Text = states.espDisplayName and player.DisplayName or player.Name end
+            end
+        end
+    end
+end)
+
 RunService.Heartbeat:Connect(function()
     if states.autoPrompt and not states.autoFarm then
-        for _, v in pairs(workspace:GetDescendants()) do
-            if v:IsA("ProximityPrompt") and v.Enabled then fireproximityprompt(v) end
-        end
+        for _, v in pairs(workspace:GetDescendants()) do if v:IsA("ProximityPrompt") and v.Enabled then fireproximityprompt(v) end end
     end
     if states.bouncingHead then
         local color = GetBouncingColor()
         for _, p in pairs(Players:GetPlayers()) do
             if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
-                p.Character.Head.Size = Vector3.new(5, 5, 5)
-                p.Character.Head.Color = color
-                p.Character.Head.CanCollide = false
+                p.Character.Head.Size, p.Character.Head.Color, p.Character.Head.CanCollide = Vector3.new(5,5,5), color, false
             end
         end
     end
@@ -285,4 +255,5 @@ Players.PlayerAdded:Connect(function(p) p.CharacterAdded:Connect(function() Crea
 Players.PlayerRemoving:Connect(RemoveDrawingESP)
 
 buildGUI()
-WindUI:Notify({ Title = "YNW HUB V.1.5", Content = "โหลดข้อมูลครบพร้อมลุย!", Duration = 5 })
+WindUI:Notify({ Title = "YNW HUB V2.0", Content = "โหลดข้อมูลครบพร้อมลุยไปซ่าได้เลยดิ!", Duration = 5 })
+
