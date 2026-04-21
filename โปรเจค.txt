@@ -204,7 +204,7 @@ local function buildGUI()
 
     -- TAB: VISUAL
     local VisualTab = W:Tab({ Title = "สายตา", Icon = "eye" })
-    VisualTab:Section({ Title = "ระบบมองทะลุ (ESP)" })
+    VisualTab:Section({ Title = "ระบบมอง" })
     VisualTab:Toggle({ Title = "แสดงเส้น Tracer", Desc = "ลากเส้นไปหาคนอื่นจะได้รู้ว่าอยู่ไหนกันบ้าง", Callback = function(v) states.espLine = v end })
     VisualTab:Toggle({ Title = "แสดงชื่อจริง", Desc = "โชว์ชื่อแม่งบนหัว", Callback = function(v) states.espName = v; if v then states.espDisplayName = false end end })
     VisualTab:Toggle({ Title = "แสดงชื่อเล่น", Desc = "ชื่อเล่น", Callback = function(v) states.espDisplayName = v; if v then states.espName = false end end })
@@ -262,7 +262,7 @@ local function buildGUI()
     GunTab:Button({ Title = "โหมดแช่แข็ง", Desc = "ยิงแล้วแข็ง", Callback = function() ApplyGunMod("Freeze") end })
     GunTab:Button({ Title = "โหมดไฟลุก", Desc = "ยิงและไฟลุก", Callback = function() ApplyGunMod("Fire") end })
     GunTab:Button({ Title = "โหมดไฟ+น้ำแข็ง", Desc = "ยิงแล้วแข็ง+ไฟลุก", Callback = function() ApplyGunMod("FireFreeze") end })
-    GunTab:Button({ Title = "กระสุนไม่จำกัดแบบระเบิดกากหน่อย", Desc = "ยิงรัวๆ ระเบิดตู้มต้ามแบบสเตตัสเป๊ะๆ", Callback = function() ApplyGunMod("NormalCustom") end })
+    GunTab:Button({ Title = "กระสุนไม่จำกัดแบบระเบิดกากหน่อย", Desc = "ยิงแล้วระเบิดกระสุนไม่จำกัด", Callback = function() ApplyGunMod("NormalCustom") end })
     GunTab:Button({ Title = "ปรับกระสุนไม่จำกัด", Desc = "กระสุนไม่จำกัด", Callback = function() ApplyGunMod("FullCustom") end })
     GunTab:Button({ Title = "แบบพอดี (No OP)", Desc = "ปรับนิดๆ หน่อยๆ ให้พอมีสีสัน", Callback = function() ApplyGunMod("NoOp") end })
 end
